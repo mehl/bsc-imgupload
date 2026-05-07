@@ -24,7 +24,8 @@ type Step = 'access' | 'user' | 'upload';
 export function ImageUploader({ apiBase = '', titleLabel = 'Titel' }: Props) {
     const [step, setStep] = useState<Step>('access');
     const [entries, setEntries] = useState<FileEntry[]>([]);
-    const [accessCode, setAccessCode] = useState(() => localStorage.getItem('imgupload_access_code') ?? '');
+    const queryAccessCode = new URLSearchParams(window.location.search).get('access_code') ?? '';
+    const [accessCode, setAccessCode] = useState(() => queryAccessCode || localStorage.getItem('imgupload_access_code'));
     const [accessLoading, setAccessLoading] = useState(false);
     const [accessError, setAccessError] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -41,6 +42,10 @@ export function ImageUploader({ apiBase = '', titleLabel = 'Titel' }: Props) {
         return () => urls.forEach(URL.revokeObjectURL);
     }, []);
 
+    useEffect(() => {
+        if (queryAccessCode) localStorage.setItem('imgupload_access_code', queryAccessCode);
+    }, [queryAccessCode]);
+
     const handleAccessCodeChange = useCallback((val: string) => {
         setAccessCode(val);
         setAccessError(null);
@@ -51,7 +56,7 @@ export function ImageUploader({ apiBase = '', titleLabel = 'Titel' }: Props) {
         setAccessLoading(true);
         setAccessError(null);
         try {
-            const params = new URLSearchParams({ password: accessCode.trim() });
+            const params = new URLSearchParams({ password: accessCode?.trim() || "" });
             const res = await fetch(`${apiBase}/api/session?${params}`, { method: 'POST' });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error ?? '');
@@ -129,7 +134,7 @@ export function ImageUploader({ apiBase = '', titleLabel = 'Titel' }: Props) {
             setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'uploading', progress: 0 } : e));
 
             await new Promise<void>((resolve) => {
-                const params = new URLSearchParams({ uuid, sessionId, email: email.trim(), nickname: nickname.trim() });
+                const params = new URLSearchParams({ uuid, email: email.trim(), nickname: nickname.trim() });
                 if (title.trim()) params.append('title', title.trim());
 
                 const formData = new FormData();
@@ -137,6 +142,7 @@ export function ImageUploader({ apiBase = '', titleLabel = 'Titel' }: Props) {
 
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `${apiBase}/api/upload?${params}`);
+                xhr.setRequestHeader('Authorization', `Bearer ${sessionId}`);
 
                 xhr.upload.addEventListener('progress', (ev) => {
                     if (ev.lengthComputable) {
@@ -183,7 +189,7 @@ export function ImageUploader({ apiBase = '', titleLabel = 'Titel' }: Props) {
         <div>
             {step === 'access' && (
                 <AccessCodeStep
-                    code={accessCode}
+                    code={accessCode!}
                     onCodeChange={handleAccessCodeChange}
                     onNext={handleAccessNext}
                     loading={accessLoading}

@@ -1,13 +1,13 @@
-import { FileThumbnail, type FileEntry } from './FileThumbnail'
+import { FileThumbnail, type FileEntry } from './FileThumbnail';
 
 interface Props {
-  entries: FileEntry[]
-  onRemove: (id: string) => void
-  uploading: boolean
+  entries: FileEntry[];
+  onRemove: (id: string) => void;
+  uploading: boolean;
 }
 
 export function ThumbnailGrid({ entries, onRemove, uploading }: Props) {
-  if (!entries.length) return null
+  if (!entries.length) return null;
 
   return (
     <div className="mb-3">
@@ -21,5 +21,5 @@ export function ThumbnailGrid({ entries, onRemove, uploading }: Props) {
         ))}
       </div>
     </div>
-  )
+  );
 }

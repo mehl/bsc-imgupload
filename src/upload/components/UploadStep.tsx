@@ -2,6 +2,7 @@ import { AddFilesButton } from './AddFilesButton';
 import { ThumbnailGrid } from './ThumbnailGrid';
 import type { FileEntry } from './FileThumbnail';
 import { ActionBar } from './ActionBar';
+import { useEffect, useRef } from 'react';
 
 export interface UploadStepProps {
     entries: FileEntry[];
@@ -33,13 +34,35 @@ export function UploadStep({
     onBack,
 }: UploadStepProps) {
     const pendingCount = entries.filter(e => e.status === 'pending').length;
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    useEffect(() => {
+        // Focus input field on step load
+        inputRef.current?.focus();
+    }, [inputRef]);
 
     return (
         <fieldset className="py-3">
             <legend>Upload</legend>
 
+            <div className="mb-3">
+                <label className="form-label" htmlFor="imgupload-title">{titleLabel}</label>
+                <input
+                    id="imgupload-title"
+                    type="text"
+                    className="form-control"
+                    value={title}
+                    onChange={e => onTitleChange(e.target.value)}
+                    disabled={uploading || done}
+                    ref={inputRef}
+                />
+            </div>
+
             <ThumbnailGrid entries={entries} onRemove={onRemove} uploading={uploading || done} />
 
+            {!entries.length && (
+                <div className="pt-1 pb-3">Bitte wähle ein oder mehrere Bilder zum Upload aus.</div>
+            )}
             {errorMessage && (
                 <div className="alert alert-danger mb-3" role="alert">{errorMessage}</div>
             )}
@@ -53,34 +76,21 @@ export function UploadStep({
                 </div>
             )}
 
-            {done ? (
+            {done && (
                 <div className="alert alert-success d-flex align-items-center justify-content-between mb-0" role="alert">
                     <span>Upload komplett.</span>
                     <button type="button" className="btn btn-success btn-sm ms-3" onClick={onReset}>
                         OK
                     </button>
                 </div>
-            ) : (
-                entries.length > 0 && (
-                    <div className="mb-3">
-                        <label className="form-label" htmlFor="imgupload-title">{titleLabel}</label>
-                        <input
-                            id="imgupload-title"
-                            type="text"
-                            className="form-control"
-                            value={title}
-                            onChange={e => onTitleChange(e.target.value)}
-                            disabled={uploading}
-                        />
-                    </div>
-                )
             )}
 
             <ActionBar>
                 {!uploading && !done && (
-                    <button type="button" className="btn btn-outline-secondary" onClick={onBack}>
-                        Zurück
-                    </button>
+                    ""
+                    // <button type="button" className="btn btn-outline-secondary" onClick={onBack}>
+                    //     Zurück
+                    // </button>
                 )}
                 {!done && entries.length > 0 && (
                     <button
@@ -95,7 +105,7 @@ export function UploadStep({
                                 Wird hochgeladen…
                             </>
                         ) : (
-                            `Upload durchführen${pendingCount > 0 ? ` (${pendingCount} Bild${pendingCount !== 1 ? 'er' : ''})` : ''}`
+                            `Upload starten ${pendingCount > 0 ? ` (${pendingCount} Bild${pendingCount !== 1 ? 'er' : ''})` : ''}`
                         )}
                     </button>
                 )}
