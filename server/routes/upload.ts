@@ -15,14 +15,15 @@ uploadRouter.post('/', async (c) => {
     const email = c.req.query('email') ?? ''
     const nickname = c.req.query('nickname') ?? ''
     const title = c.req.query('title') ?? ''
-    const sessionId = c.req.query('sessionId') ?? ''
 
     if (!UUID_RE.test(uuid)) {
         return c.json({ error: 'Ungültige oder fehlende UUID.' }, 400)
     }
 
+    const auth = c.req.header('Authorization') ?? ''
+    const sessionId = auth.startsWith('Bearer ') ? auth.slice(7) : ''
     const session = sessionService.get(sessionId)
-    if (!session) {
+    if (!session || !session.project) {
         return c.json({ error: 'Ungültige oder abgelaufene Session.' }, 400)
     }
     sessionService.refresh(sessionId)

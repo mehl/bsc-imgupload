@@ -30,18 +30,21 @@ function injectReactPreambleForTestHtml(): Plugin {
   };
 }
 
-function fixTestHtmlForProd(): Plugin {
+function handleTestHtmlForBuild(): Plugin {
   return {
-    name: 'fix-test-html',
+    name: 'handle-test-html',
     apply: 'build',
     writeBundle() {
       const file = path.resolve(__dirname, 'dist/test.html');
       if (!fs.existsSync(file)) return;
-      const fixed = fs.readFileSync(file, 'utf-8')
-        .replace(
-          '<script type="module" src="/src/web-component.ts"></script>',
-          '<link rel="stylesheet" href="/image-component.css">\n    <script type="module" src="/image-component.mjs"></script>'
-        );
+      if (!this.meta.watchMode) {
+        fs.unlinkSync(file);
+        return;
+      }
+      const fixed = fs.readFileSync(file, 'utf-8').replace(
+        '<script type="module" src="/src/web-component.ts"></script>',
+        '<link rel="stylesheet" href="/image-component.css">\n    <script type="module" src="/image-component.mjs"></script>'
+      );
       fs.writeFileSync(file, fixed);
     }
   };
@@ -49,7 +52,7 @@ function fixTestHtmlForProd(): Plugin {
 
 export default defineConfig(({ command }) => {
   const config: UserConfig = {
-    plugins: [react(), injectReactPreambleForTestHtml(), fixTestHtmlForProd()],
+    plugins: [react(), injectReactPreambleForTestHtml(), handleTestHtmlForBuild()],
     server: {
       port: 5173,
       proxy: {
@@ -69,8 +72,7 @@ export default defineConfig(({ command }) => {
       rollupOptions: {
         output: {
           assetFileNames: (asset) => {
-            const names: string[] = asset.names ?? (asset.name ? [asset.name] : [])
-            return names.includes('style.css') ? 'image-component.css' : (names[0] ?? 'asset')
+            return asset.names?.includes('style.css') ? 'image-component.css' : (asset.names?.[0] ?? 'asset')
           }
         }
       }

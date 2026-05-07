@@ -11,7 +11,8 @@
     "docker:dev:down": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down",
     "docker:prod": "docker compose up --build",
     "docker:prod:down": "docker compose down",
-    "reset:dev": "tsx scripts/reset-dev.ts"
+    "reset:dev": "tsx scripts/reset-dev.ts",
+    "release": "sh scripts/build-release.sh"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.1",

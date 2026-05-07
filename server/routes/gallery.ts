@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { imageSetRepository } from '../services/ImageSetRepository'
 import { imageDocumentRepository } from '../services/ImageDocumentRepository'
+import { BASE_URL } from '../config'
 
 export const galleryRouter = new Hono()
 
@@ -19,8 +20,8 @@ galleryRouter.get('/:projectHandle', async (c) => {
                 id: img._id,
                 originalName: img.originalName,
                 uploadedAt: img.uploadedAt,
-                thumb: `/api/image/${img.uuid}/${img.timestamp}/${img.fileId}/300`,
-                large: `/api/image/${img.uuid}/${img.timestamp}/${img.fileId}/3840`,
+                thumb: `${BASE_URL}/api/image/${img.uuid}/${img.timestamp}/${img.fileId}/300`,
+                large: `${BASE_URL}/api/image/${img.uuid}/${img.timestamp}/${img.fileId}/3840`,
             })),
         }
     }))

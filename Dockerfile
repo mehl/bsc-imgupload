@@ -30,7 +30,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 COPY package.json yarn.lock ./
 RUN --mount=type=cache,target=/usr/local/share/.cache/yarn \
-    yarn install --frozen-lockfile --production --ignore-optional
+    yarn install --frozen-lockfile --production
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist-server ./dist-server

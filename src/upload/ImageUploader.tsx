@@ -15,13 +15,13 @@ function getOrCreateUUID(): string {
 }
 
 export interface Props {
-    apiUrl?: string;
+    apiBase?: string;
     titleLabel?: string;
 }
 
 type Step = 'access' | 'user' | 'upload';
 
-export function ImageUploader({ apiUrl = '/api/upload', titleLabel = 'Titel' }: Props) {
+export function ImageUploader({ apiBase = '', titleLabel = 'Titel' }: Props) {
     const [step, setStep] = useState<Step>('access');
     const [entries, setEntries] = useState<FileEntry[]>([]);
     const [accessCode, setAccessCode] = useState(() => localStorage.getItem('imgupload_access_code') ?? '');
@@ -52,7 +52,7 @@ export function ImageUploader({ apiUrl = '/api/upload', titleLabel = 'Titel' }: 
         setAccessError(null);
         try {
             const params = new URLSearchParams({ password: accessCode.trim() });
-            const res = await fetch(`${apiUrl}/session?${params}`, { method: 'POST' });
+            const res = await fetch(`${apiBase}/api/session?${params}`, { method: 'POST' });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error ?? '');
             setSessionId(data.sessionId);
@@ -62,7 +62,7 @@ export function ImageUploader({ apiUrl = '/api/upload', titleLabel = 'Titel' }: 
         } finally {
             setAccessLoading(false);
         }
-    }, [accessCode, apiUrl]);
+    }, [accessCode, apiBase]);
 
     const handleFilesAdded = useCallback((files: File[]) => {
         setErrorMessage(null);
@@ -136,7 +136,7 @@ export function ImageUploader({ apiUrl = '/api/upload', titleLabel = 'Titel' }: 
                 formData.append('file', entry.file);
 
                 const xhr = new XMLHttpRequest();
-                xhr.open('POST', `${apiUrl}?${params}`);
+                xhr.open('POST', `${apiBase}/api/upload?${params}`);
 
                 xhr.upload.addEventListener('progress', (ev) => {
                     if (ev.lengthComputable) {
@@ -177,7 +177,7 @@ export function ImageUploader({ apiUrl = '/api/upload', titleLabel = 'Titel' }: 
         } else {
             setErrorMessage(`${successCount} erfolgreich, ${errorCount} fehlgeschlagen.`);
         }
-    }, [entries, uploading, sessionId, email, nickname, title, apiUrl]);
+    }, [entries, uploading, sessionId, email, nickname, title, apiBase]);
 
     return (
         <div>

@@ -10,6 +10,7 @@ import { sessionRouter } from './routes/session'
 import { uploadRouter } from './routes/upload'
 import { galleryRouter } from './routes/gallery'
 import { imageRouter } from './routes/image'
+import { adminRouter } from './routes/admin'
 import { syncService } from './services/sync'
 
 const app = new Hono()
@@ -18,12 +19,20 @@ fs.mkdirSync(UPLOAD_DIR, { recursive: true })
 
 app.use(cors({
     origin: ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : '*',
-    allowMethods: ['GET', 'POST', 'OPTIONS'],
-    allowHeaders: ['Content-Type'],
+    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
 }))
 
-// Block API requests from non-whitelisted origins
-app.use('/api/*', async (c, next) => {
+// Block upload/session requests from non-whitelisted origins
+app.use('/api/upload/*', async (c, next) => {
+    if (ALLOWED_ORIGINS.length === 0) return next()
+    const origin = c.req.header('origin')
+    if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
+        return c.json({ error: 'Forbidden' }, 403)
+    }
+    return next()
+})
+app.use('/api/session', async (c, next) => {
     if (ALLOWED_ORIGINS.length === 0) return next()
     const origin = c.req.header('origin')
     if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
@@ -32,13 +41,14 @@ app.use('/api/*', async (c, next) => {
     return next()
 })
 
-app.route('/api/upload/session', sessionRouter)
+app.route('/api/session', sessionRouter)
 app.route('/api/upload', uploadRouter)
 app.route('/api/gallery', galleryRouter)
 app.route('/api/image', imageRouter)
+app.route('/api/admin', adminRouter)
 
 if (fs.existsSync(DIST_DIR)) {
-    app.get('/', (c) => c.redirect('/test.html'))
+    app.get('/', (c) => c.html('<!doctype html><html><body></body></html>'))
     app.use('/*', serveStatic({ root: path.relative(process.cwd(), DIST_DIR) }))
 }
 

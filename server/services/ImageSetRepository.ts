@@ -69,6 +69,34 @@ class ImageSetRepository {
         const col = await this.getCollection();
         return col.find({ projectHandle }).sort({ timestamp: 1 }).toArray();
     }
+
+    async findById(setId: string): Promise<ImageSet | null> {
+        const col = await this.getCollection();
+        return col.findOne({ _id: setId });
+    }
+
+    async rename(setId: string, title: string): Promise<boolean> {
+        const col = await this.getCollection();
+        const result = await col.updateOne({ _id: setId }, { $set: { title } });
+        return result.matchedCount > 0;
+    }
+
+    async removeImage(setId: string, imageId: string): Promise<boolean> {
+        const col = await this.getCollection();
+        const result = await col.updateOne({ _id: setId }, { $pull: { image_ids: imageId } as any });
+        return result.matchedCount > 0;
+    }
+
+    async moveImage(fromSetId: string, toSetId: string, imageId: string): Promise<boolean> {
+        const col = await this.getCollection();
+        const pullResult = await col.updateOne(
+            { _id: fromSetId, image_ids: imageId },
+            { $pull: { image_ids: imageId } as any }
+        );
+        if (pullResult.modifiedCount === 0) return false;
+        await col.updateOne({ _id: toSetId }, { $addToSet: { image_ids: imageId } });
+        return true;
+    }
 }
 
 export const imageSetRepository = ImageSetRepository.getInstance();

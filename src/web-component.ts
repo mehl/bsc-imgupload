@@ -8,7 +8,7 @@ class ImageUploaderElement extends HTMLElement {
 
   private getProps() {
     return {
-      apiUrl: this.getAttribute('api-url') ?? '/api/upload',
+      apiBase: this.getAttribute('api-base') ?? '',
       titleLabel: this.getAttribute('title-label') ?? 'Titel',
     }
   }
@@ -26,7 +26,7 @@ class ImageUploaderElement extends HTMLElement {
   }
 
   static get observedAttributes() {
-    return ['api-url', 'title-label']
+    return ['api-base', 'title-label']
   }
 
   attributeChangedCallback() {
@@ -44,7 +44,7 @@ class ImageGalleryElement extends HTMLElement {
   private getProps() {
     return {
       project: this.getAttribute('project') ?? '',
-      apiUrl: this.getAttribute('api-url') ?? '/api/gallery',
+      apiBase: this.getAttribute('api-base') ?? '',
     }
   }
 
@@ -61,7 +61,7 @@ class ImageGalleryElement extends HTMLElement {
   }
 
   static get observedAttributes() {
-    return ['project', 'api-url']
+    return ['project', 'api-base']
   }
 
   attributeChangedCallback() {

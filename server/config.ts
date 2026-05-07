@@ -7,11 +7,15 @@ export const PROJECTS_FILE = process.env.PROJECTS_FILE || path.join(__dirname, '
 
 export const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/imgupload';
 
+export const BASE_URL = (process.env.BASE_URL || '').replace(/\/$/, '');
+
 export const ALLOWED_ORIGINS: string[] = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
     : [];
 
 export const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
+export const ADMIN_SESSION_TTL_MS = 4 * 60 * 60 * 1000;
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? '';
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type VariantConfig = {

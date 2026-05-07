@@ -1,11 +1,12 @@
 import { randomUUID } from 'crypto';
-import { SESSION_TTL_MS } from '../config';
+import { SESSION_TTL_MS, ADMIN_SESSION_TTL_MS } from '../config';
 import { Project } from './project';
 
 export interface Session {
     timestamp: string;
     expiresAt: number;
-    project: Project;
+    project?: Project;
+    isAdmin: boolean;
 }
 
 class SessionService {
@@ -29,8 +30,15 @@ class SessionService {
     create(project: Project): { sessionId: string; timestamp: string } {
         const sessionId = randomUUID();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-        this.sessions.set(sessionId, { timestamp, expiresAt: Date.now() + SESSION_TTL_MS, project });
+        this.sessions.set(sessionId, { timestamp, expiresAt: Date.now() + SESSION_TTL_MS, project, isAdmin: false });
         return { sessionId, timestamp };
+    }
+
+    createAdmin(): string {
+        const sessionId = randomUUID();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        this.sessions.set(sessionId, { timestamp, expiresAt: Date.now() + ADMIN_SESSION_TTL_MS, isAdmin: true });
+        return sessionId;
     }
 
     get(sessionId: string): Session | null {
@@ -40,6 +48,11 @@ class SessionService {
             return null;
         }
         return session;
+    }
+
+    isAdmin(sessionId: string): boolean {
+        const session = this.get(sessionId);
+        return session?.isAdmin === true;
     }
 
     refresh(sessionId: string): void {

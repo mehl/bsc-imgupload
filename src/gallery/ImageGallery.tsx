@@ -4,10 +4,10 @@ import { SetItem } from './SetItem'
 
 type Props = {
     project: string
-    apiUrl?: string
+    apiBase?: string
 }
 
-export function ImageGallery({ project, apiUrl = '/api/gallery' }: Props) {
+export function ImageGallery({ project, apiBase = '' }: Props) {
     const [data, setData] = useState<GalleryData | null>(null)
     const [error, setError] = useState<string | null>(null)
 
@@ -15,11 +15,11 @@ export function ImageGallery({ project, apiUrl = '/api/gallery' }: Props) {
         if (!project) return
         setData(null)
         setError(null)
-        fetch(`${apiUrl}/${project}`)
+        fetch(`${apiBase}/api/gallery/${project}`)
             .then(r => r.ok ? r.json() as Promise<GalleryData> : Promise.reject(r.statusText))
             .then(setData)
             .catch(e => setError(String(e)))
-    }, [project, apiUrl])
+    }, [project, apiBase])
 
     if (error) return <p className="text-danger small">{error}</p>
     if (!data) return <p className="text-muted small">Lade…</p>
