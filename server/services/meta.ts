@@ -33,21 +33,25 @@ class MetaService {
     writeFileMeta(
         spec: PathSpec,
         fileId: number,
-        file: Express.Multer.File,
+        originalName: string,
+        savedName: string,
+        size: number,
+        format: string,
         variants: Record<string, string>,
         exif: Record<string, unknown>
-    ): void {
+    ): FileMeta {
         const meta: FileMeta = {
             id: fileId,
-            originalName: file.originalname,
-            savedName: file.filename,
-            size: file.size,
-            format: file.mimetype,
+            originalName,
+            savedName,
+            size,
+            format,
             uploadedAt: new Date().toISOString(),
             variants,
             exif,
         };
         fileService.writeJson(spec, meta, String(fileId));
+        return meta;
     }
 }
 

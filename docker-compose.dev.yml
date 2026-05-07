@@ -1,0 +1,20 @@
+services:
+  imgupload:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "3008:3008"
+    environment:
+      PORT: "3008"
+      UPLOAD_DIR: /data/uploads
+      MONGODB_URI: mongodb://mongodb:27017/imgupload
+      PROJECTS_FILE: /app/config/projects.json
+    volumes:
+      - ./uploads:/data/uploads
+      - ./config:/app/config
+      - ./server:/app/server
+      - ./src:/app/src
+  mongodb:
+    ports:
+      - "27017:27017"

@@ -1,77 +1,66 @@
-import fs from 'fs';
-import { Router } from 'express';
-import multer from 'multer';
-import { UUID_RE } from '../config';
-import { sessionService } from '../services/session';
-import { fileService } from '../services/file';
-import { metaService } from '../services/meta';
-import { imageProcessorService } from '../services/imageProcessor';
+import { Hono } from 'hono'
+import fs from 'fs'
+import path from 'path'
+import { UUID_RE } from '../config'
+import { sessionService } from '../services/session'
+import { fileService } from '../services/file'
+import { metaService } from '../services/meta'
+import { imageProcessorService } from '../services/imageProcessor'
+import { syncService } from '../services/sync'
 
-export const uploadRouter = Router();
+export const uploadRouter = new Hono()
 
-uploadRouter.post('/', (req, res) => {
-    const uuid = (req.query.uuid as string) ?? '';
-    const email = (req.query.email as string) ?? '';
-    const nickname = (req.query.nickname as string) ?? '';
-    const title = (req.query.title as string) ?? '';
-    const sessionId = (req.query.sessionId as string) ?? '';
+uploadRouter.post('/', async (c) => {
+    const uuid = c.req.query('uuid') ?? ''
+    const email = c.req.query('email') ?? ''
+    const nickname = c.req.query('nickname') ?? ''
+    const title = c.req.query('title') ?? ''
+    const sessionId = c.req.query('sessionId') ?? ''
 
     if (!UUID_RE.test(uuid)) {
-        res.status(400).json({ error: 'Ungültige oder fehlende UUID.' });
-        return;
+        return c.json({ error: 'Ungültige oder fehlende UUID.' }, 400)
     }
 
-    const session = sessionService.get(sessionId);
+    const session = sessionService.get(sessionId)
     if (!session) {
-        res.status(400).json({ error: 'Ungültige oder abgelaufene Session.' });
-        return;
+        return c.json({ error: 'Ungültige oder abgelaufene Session.' }, 400)
     }
-    sessionService.refresh(sessionId);
+    sessionService.refresh(sessionId)
 
-    const spec = { uuid, timestamp: session.timestamp };
-    const dir = fileService.dir(spec);
-    fs.mkdirSync(dir, { recursive: true });
-    const fileId = fileService.nextFileId(spec);
+    const body = await c.req.parseBody()
+    const file = body['file']
 
-    const storage = multer.diskStorage({
-        destination: (_req, _file, cb) => cb(null, dir),
-        filename: (_req, file, cb) => cb(null, `${fileId}_original${fileService.sanitizeExt(file.originalname)}`),
-    });
+    if (!(file instanceof File)) {
+        return c.json({ error: 'Keine Datei übermittelt.' }, 400)
+    }
+    if (!file.type.startsWith('image/')) {
+        return c.json({ error: 'Nur Bilddateien sind erlaubt.' }, 400)
+    }
+    if (file.size > 50 * 1024 * 1024) {
+        return c.json({ error: 'Datei zu groß (max. 50 MB).' }, 400)
+    }
 
-    const upload = multer({
-        storage,
-        limits: { files: 1, fileSize: 50 * 1024 * 1024 },
-        fileFilter: (_req, file, cb) => {
-            if (file.mimetype.startsWith('image/')) cb(null, true);
-            else cb(new Error('Nur Bilddateien sind erlaubt.'));
-        },
-    }).single('file');
+    const spec = { uuid, timestamp: session.timestamp }
+    const dir = fileService.dir(spec)
+    fs.mkdirSync(dir, { recursive: true })
+    const fileId = fileService.nextFileId(spec)
 
-    // @types/multer bundles its own express-serve-static-core, causing type mismatch
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    upload(req as any, res as any, async (err: unknown) => {
-        if (err) {
-            const msg = err instanceof Error ? err.message : 'Upload fehlgeschlagen.';
-            res.status(400).json({ error: msg });
-            return;
-        }
+    const ext = fileService.sanitizeExt(file.name)
+    const filename = `${fileId}_original${ext}`
+    const filepath = path.join(dir, filename)
 
-        const file = req.file as Express.Multer.File | undefined;
-        if (!file) {
-            res.status(400).json({ error: 'Keine Datei übermittelt.' });
-            return;
-        }
+    await fs.promises.writeFile(filepath, Buffer.from(await file.arrayBuffer()))
 
-        metaService.writeUserMeta(uuid, email, nickname);
+    metaService.writeUserMeta(uuid, email, nickname)
 
-        const [exif, variants] = await Promise.all([
-            imageProcessorService.extractExif(file.path),
-            imageProcessorService.generateVariants(file.path, dir, fileId),
-        ]);
+    const [exif, variants] = await Promise.all([
+        imageProcessorService.extractExif(filepath),
+        imageProcessorService.generateVariants(filepath, dir, fileId),
+    ])
 
-        metaService.writeBatchMeta(spec, title, session.project.handle);
-        metaService.writeFileMeta(spec, fileId, file, variants, exif);
+    metaService.writeBatchMeta(spec, title, session.project.handle)
+    const fileMeta = metaService.writeFileMeta(spec, fileId, file.name, filename, file.size, file.type, variants, exif)
+    syncService.syncFile(spec.uuid, spec.timestamp, fileMeta).catch(console.error)
 
-        res.json({ success: true, file: { id: fileId, name: file.filename, size: file.size, format: file.mimetype } });
-    });
-});
+    return c.json({ success: true, file: { id: fileId, name: filename, size: file.size, format: file.type } })
+})

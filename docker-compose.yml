@@ -1,10 +1,19 @@
 services:
   imgupload:
     build: .
-    ports:
-      - "3008:3008"
     volumes:
       - ./uploads:/data/uploads
+      - ./config:/app/config
     environment:
       PORT: "3008"
       UPLOAD_DIR: /data/uploads
+      MONGODB_URI: mongodb://mongodb:27017/imgupload
+      PROJECTS_FILE: /app/config/projects.json
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:7
+    volumes:
+      - ./mongodb:/data/db
+    restart: unless-stopped
