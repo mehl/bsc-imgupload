@@ -6,3 +6,4 @@ mongodb/
 testdata/
 releases/
 *.local
+.env

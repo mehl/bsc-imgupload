@@ -4,11 +4,8 @@ services:
     volumes:
       - ./uploads:/data/uploads
       - ./config:/app/config
-    environment:
-      PORT: "3008"
-      UPLOAD_DIR: /data/uploads
-      MONGODB_URI: mongodb://mongodb:27017/imgupload
-      PROJECTS_FILE: /app/config/projects.json
+    env_file:
+      - .env
     depends_on:
       - mongodb
 
