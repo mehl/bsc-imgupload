@@ -1,0 +1,10 @@
+services:
+  imgupload:
+    build: .
+    ports:
+      - "3008:3008"
+    volumes:
+      - ./uploads:/data/uploads
+    environment:
+      PORT: "3008"
+      UPLOAD_DIR: /data/uploads
