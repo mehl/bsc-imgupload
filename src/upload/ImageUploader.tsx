@@ -4,6 +4,7 @@ import { AccessCodeStep } from './components/AccessCodeStep';
 import { UserStep } from './components/UserStep';
 import { UploadStep } from './components/UploadStep';
 import type { FileEntry } from './components/FileThumbnail';
+import { uploadFile } from './uploadFile';
 
 function getOrCreateUUID(): string {
     let uuid = localStorage.getItem('imgupload_uuid');
@@ -132,46 +133,26 @@ export function ImageUploader({ apiBase = '', titleLabel = 'Titel' }: Props) {
 
         for (const entry of pending) {
             setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'uploading', progress: 0 } : e));
-
-            await new Promise<void>((resolve) => {
-                const params = new URLSearchParams({ uuid, email: email.trim(), nickname: nickname.trim() });
-                if (title.trim()) params.append('title', title.trim());
-
-                const formData = new FormData();
-                formData.append('file', entry.file);
-
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', `${apiBase}/api/upload?${params}`);
-                xhr.setRequestHeader('Authorization', `Bearer ${sessionId}`);
-
-                xhr.upload.addEventListener('progress', (ev) => {
-                    if (ev.lengthComputable) {
-                        const progress = Math.round((ev.loaded / ev.total) * 100);
+            try {
+                await uploadFile({
+                    file: entry.file,
+                    apiBase,
+                    sessionId,
+                    uuid,
+                    email,
+                    nickname,
+                    title,
+                    onProgress: (progress) => {
                         setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, progress } : e));
-                    }
+                    },
                 });
-
-                xhr.addEventListener('load', () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'success', progress: 100 } : e));
-                        successCount++;
-                    } else {
-                        let msg = 'Upload fehlgeschlagen.';
-                        try { msg = JSON.parse(xhr.responseText).error ?? msg; } catch { /* ignore */ }
-                        setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error', error: msg } : e));
-                        errorCount++;
-                    }
-                    resolve();
-                });
-
-                xhr.addEventListener('error', () => {
-                    setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error', error: 'Netzwerkfehler.' } : e));
-                    errorCount++;
-                    resolve();
-                });
-
-                xhr.send(formData);
-            });
+                setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'success', progress: 100 } : e));
+                successCount++;
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Upload fehlgeschlagen.';
+                setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error', error: msg } : e));
+                errorCount++;
+            }
         }
 
         setUploading(false);

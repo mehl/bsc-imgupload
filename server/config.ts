@@ -27,7 +27,7 @@ export type VariantConfig = {
 };
 
 export const VARIANTS: VariantConfig[] = [
-    { suffix: '3840', size: 3840, quality: 90, fit: 'inside', withoutEnlargement: true },
+    { suffix: '3840', size: 3840, quality: 75, fit: 'inside', withoutEnlargement: true },
     { suffix: '1200', size: 1200, quality: 70, fit: 'inside', withoutEnlargement: true },
     { suffix: '300', size: 300, quality: 60, fit: 'cover', withoutEnlargement: false },
 ];

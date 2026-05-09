@@ -8,6 +8,33 @@ import { metaService } from '../services/meta'
 import { imageProcessorService } from '../services/imageProcessor'
 import { syncService } from '../services/sync'
 
+const ALLOWED_EXIF: Record<string, (v: unknown) => boolean> = {
+    DateTimeOriginal: (v) => typeof v === 'string',
+    CreateDate: (v) => typeof v === 'string',
+    GPSLatitude: (v) => typeof v === 'number' || (Array.isArray(v) && v.length > 0 && (v as unknown[]).every(x => typeof x === 'number')),
+    GPSLatitudeRef: (v) => typeof v === 'string' && (v as string).length <= 2,
+    GPSLongitude: (v) => typeof v === 'number' || (Array.isArray(v) && v.length > 0 && (v as unknown[]).every(x => typeof x === 'number')),
+    GPSLongitudeRef: (v) => typeof v === 'string' && (v as string).length <= 2,
+    Make: (v) => typeof v === 'string' && (v as string).length <= 64,
+    Model: (v) => typeof v === 'string' && (v as string).length <= 64,
+    ImageWidth: (v) => typeof v === 'number' && Number.isInteger(v) && (v as number) > 0,
+    ImageHeight: (v) => typeof v === 'number' && Number.isInteger(v) && (v as number) > 0,
+    Orientation: (v) => typeof v === 'number' && Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 8,
+};
+
+function parseClientExif(raw: unknown): Record<string, unknown> {
+    if (typeof raw !== 'string') return {};
+    let parsed: unknown;
+    try { parsed = JSON.parse(raw); } catch { return {}; }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    const result: Record<string, unknown> = {};
+    for (const [key, validate] of Object.entries(ALLOWED_EXIF)) {
+        const value = (parsed as Record<string, unknown>)[key];
+        if (value !== undefined && validate(value)) result[key] = value;
+    }
+    return result;
+}
+
 export const uploadRouter = new Hono()
 
 uploadRouter.post('/', async (c) => {
@@ -54,8 +81,11 @@ uploadRouter.post('/', async (c) => {
 
     metaService.writeUserMeta(uuid, email, nickname)
 
+    const clientExif = parseClientExif(body['exif']);
     const [exif, variants] = await Promise.all([
-        imageProcessorService.extractExif(filepath),
+        Object.keys(clientExif).length > 0
+            ? Promise.resolve(clientExif)
+            : imageProcessorService.extractExif(filepath),
         imageProcessorService.generateVariants(filepath, dir, fileId),
     ])
 
